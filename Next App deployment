@@ -1,0 +1,200 @@
+#Jenkins Deployment for Next.js
+# 1. Jenkinsfile Configuration
+pipeline {
+    agent any
+    
+    environment {
+        NODE_VERSION = '18'
+        NPM_REGISTRY = 'https://registry.npmjs.org/'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', 
+                    url: 'https://github.com/your-username/your-nextjs-repo.git'
+            }
+        }
+        
+        stage('Setup Node') {
+            steps {
+                nodejs(nodeJSInstallationName: 'Node 18') {
+                    sh 'node --version'
+                    sh 'npm --version'
+                }
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm ci'
+            }
+        }
+        
+        stage('Lint') {
+            steps {
+                sh 'npm run lint'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'npm run test'
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                script {
+                    // Example deployment strategies
+                    if (env.BRANCH_NAME == 'main') {
+                        // Production deployment
+                        deployToProduction()
+                    } else if (env.BRANCH_NAME == 'develop') {
+                        // Staging deployment
+                        deployToStaging()
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Deployment successful!'
+            // Send notification
+            slackSend(message: "Deployment successful for ${env.JOB_NAME}")
+        }
+        
+        failure {
+            echo 'Deployment failed!'
+            // Send error notification
+            slackSend(message: "Deployment failed for ${env.JOB_NAME}")
+        }
+    }
+}
+
+// Custom deployment functions
+def deployToProduction() {
+    // Example production deployment
+    sh '''
+        # Stop existing process
+        pm2 delete next-app || true
+        
+        # Start new deployment
+        pm2 start npm --name "next-app" -- start
+    '''
+}
+
+def deployToStaging() {
+    // Example staging deployment
+    sh '''
+        # Deploy to staging server
+        scp -r .next/ user@staging-server:/path/to/app/
+        ssh user@staging-server "cd /path/to/app && npm run start"
+    '''
+}
+
+# Required Jenkins Plugins
+
+#NodeJS Plugin
+#Git Plugin
+#Slack Notification Plugin
+#GitHub Integration Plugin
+
+#2. Node.js Configuration
+// Manage Jenkins > Global Tool Configuration
+nodejs('Node 18') {
+    installer {
+        nodeJSVersion('18.x')
+    }
+}
+
+#Docker-based Deployment
+
+stage('Docker Deploy') {
+    steps {
+        script {
+            docker.build('nextjs-app:${BUILD_NUMBER}')
+            docker.withRegistry('https://your-registry.com', 'docker-credentials') {
+                docker.image('nextjs-app:${BUILD_NUMBER}').push()
+                
+                // Deploy to target serverstage('Deploy with Environment') {
+    environment {
+        // Load environment-specific variables
+        NEXT_PUBLIC_API_URL = credentials('api-url')
+        DATABASE_URL = credentials('database-connection')
+    }
+    steps {
+        sh '''
+            echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" > .env.production
+            echo "DATABASE_URL=${DATABASE_URL}" >> .env.production
+        '''
+    }
+}
+
+#Security Considerations
+#Environment Management
+#Use Jenkins Credentials Store
+#Implement Role-Based Access Control (RBAC)
+#Use SSH keys for server authentication
+#Scan dependencies for vulnerabilities
+
+                sh '''
+                    docker pull nextjs-app:${BUILD_NUMBER}
+                    docker stop existing-container || true
+                    docker rm existing-container || true
+                    docker run -d --name next-app -p 3000:3000 nextjs-app:${BUILD_NUMBER}
+                '''
+            }
+        }
+    }
+}
+
+#Monitoring and Logging
+stage('Monitoring Setup') {
+    steps {
+        sh '''
+            # Install monitoring tools
+            npm install -g pm2
+            pm2 install pm2-metrics
+            
+            # Configure logging
+            pm2 logs
+        '''
+    }
+}
+#Best Practices
+
+#Use semantic versioning
+#Implement comprehensive testing
+#Create separate pipelines for different environments
+#Use caching to speed up builds
+#Implement rollback strategies
+
+#Recommended Tools Integration
+
+#SonarQube for code quality
+#OWASP Dependency-Check
+#Artifactory for artifact management
+#Sentry for error tracking
+
+#Troubleshooting
+# Common Jenkins Next.js Deployment Commands
+# Check Jenkins logs
+tail -f /var/log/jenkins/jenkins.log
+
+# Verify node installation
+nodejs --version
+npm --version
+
+# Clear npm cache if needed
+#npm cache clean --force
+
+
